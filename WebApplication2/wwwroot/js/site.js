@@ -1,171 +1,100 @@
-﻿// Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
-// for details on configuring this project to bundle and minify static web assets.
+﻿// Initialize the map
+var map = L.map('map', { zoomControl: false }).setView([51.505, -0.09], 13);
 
-// Write your JavaScript code.
-// Initialize the map
-var map = L.map('map').setView([51.505, -0.09], 13);
+// Add event listeners to custom zoom buttons
+document.getElementById('zoom-in').onclick = function () {
+    map.zoomIn();
+};
+document.getElementById('zoom-out').onclick = function () {
+    map.zoomOut();
+};
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
+// Initialize the FeatureGroup to store editable layers
 var drawnItems = new L.FeatureGroup();
 map.addLayer(drawnItems);
 
-var drawControl;
-var currentShape;
-var reportedErrors = []; // Array to store all reported errors
+// Variable to store the current drawing mode
+var currentMode = null;
 
-//
-//
-//
-//Functions to allow drawing different shapes
-//Select what shape you want to draw
+// Function to show shape selection popup
+function showShapeSelectionPopup(latlng) {
+    var popupContent = L.DomUtil.create('div', 'shape-selection-popup');
+    popupContent.innerHTML = `
+        <button class="shape-button" data-shape="Marker">Marker</button>
+        <button class="shape-button" data-shape="Circle">Circle</button>
+        <button class="shape-button" data-shape="Polyline">Line</button>
+        <button class="shape-button" data-shape="Polygon">Polygon</button>
+    `;
+
+    // Add click event listeners to buttons
+    var buttons = popupContent.querySelectorAll('.shape-button');
+    buttons.forEach(function (button) {
+        L.DomEvent.on(button, 'click', function (e) {
+            L.DomEvent.stopPropagation(e);
+            selectShape(this.getAttribute('data-shape'), latlng);
+        });
+    });
+
+    var popup = L.popup()
+        .setLatLng(latlng)
+        .setContent(popupContent)
+        .openOn(map);
+}
+
+// Function to select shape and start drawing
+function selectShape(shapeType, latlng) {
+    map.closePopup();
+
+    var drawOptions = {
+        marker: shapeType === 'Marker' ? { startingPoint: latlng } : false,
+        circle: shapeType === 'Circle',
+        polyline: shapeType === 'Polyline',
+        polygon: shapeType === 'Polygon',
+        rectangle: false,
+        circlemarker: false
+    };
+
+    var shape = new L.Draw[shapeType](map, drawOptions[shapeType.toLowerCase()]);
+    shape.enable();
+
+    if (shapeType === 'Marker') {
+        shape.setLatLng(latlng);
+    }
+
+    currentMode = shapeType;
+}
+
+// Event handler for map clicks
 map.on('click', function (e) {
-    if (!drawControl) {
+    if (!currentMode) {
         showShapeSelectionPopup(e.latlng);
     }
 });
 
-function showShapeSelectionPopup(latlng) {
-    var popup = L.popup()
-        .setLatLng(latlng)
-        .setContent(
-            '<button onclick="selectShape(\'marker\')">Marker</button>' +
-            '<button onclick="selectShape(\'circle\')">Circle</button>' +
-            '<button onclick="selectShape(\'polyline\')">Line</button>' +
-            '<button onclick="selectShape(\'polygon\')">Polygon</button>'
-        )
-        .openOn(map);
-}
-
-
-function selectShape(shapeType) {
-    map.closePopup();
-
-    if (drawControl) {
-        map.removeControl(drawControl);
-    }
-
-    var drawOptions = {
-        draw: {
-            marker: shapeType === 'marker',
-            circle: shapeType === 'circle',
-            polyline: shapeType === 'polyline',
-            polygon: shapeType === 'polygon',
-            rectangle: false,
-            circlemarker: false
-        },
-        edit: false
-    };
-
-    drawControl = new L.Control.Draw(drawOptions);
-    map.addControl(drawControl);
-
-    new L.Draw[shapeType.charAt(0).toUpperCase() + shapeType.slice(1)](map).enable();
-}
-
-
+// Event handler for when a shape is created
 map.on(L.Draw.Event.CREATED, function (event) {
     var layer = event.layer;
     drawnItems.addLayer(layer);
-    currentShape = layer;
 
-    addCommentToShape(layer);
+    // Prompt for a comment
+    var comment = prompt("Please enter a comment for this shape:");
+    if (comment) {
+        layer.bindPopup(comment);
+    }
+
+    // Reset the drawing mode
+    currentMode = null;
 });
 
-//Add comment when creating marker
-function addCommentToShape(layer) {
-    var comment = prompt("Please enter a comment for this error:");
+// Event handler for when drawing starts
+map.on(L.Draw.Event.DRAWSTART, function (event) {
+    // No need to store the draw control
+});
 
-    if (comment !== null) {
-        // Store the shape data and comment
-        var shapeData = layer.toGeoJSON();
-        var errorReport = {
-            id: Date.now(), // Unique identifier
-            shape: shapeData,
-            comment: comment
-        };
-        reportedErrors.push(errorReport);
-
-        // Assign the ID to the layer so it can be found later
-        layer.customId = errorReport.id; // Custom property to store the unique ID
-
-        // Add a popup to the shape with the comment and an edit button
-        var popupContent = `
-          <p>${comment}</p>
-          <button onclick="editComment(${errorReport.id})">Edit Comment</button>
-      `;
-        layer.bindPopup(popupContent).openPopup();
-
-        console.log('Error report:', errorReport);
-    } else {
-        // If no comment provided, remove the shape
-        drawnItems.removeLayer(layer);
-    }
-
-    // Remove the draw control after the shape is created
-    if (drawControl) {
-        map.removeControl(drawControl);
-        drawControl = null;
-    }
-}
-
-//Edit marker commet
-function editComment(id) {
-    var errorReport = reportedErrors.find(report => report.id === id);
-    if (errorReport) {
-        var newComment = prompt("Edit your comment:", errorReport.comment);
-        if (newComment !== null) {
-            errorReport.comment = newComment;
-
-            // Find the layer associated with the given id using customId
-            var layer = drawnItems.getLayers().find(layer => layer.customId === id);
-            if (layer) {
-                // Update the popup content
-                var popupContent = `
-                  <p>${newComment}</p>
-                  <button onclick="editComment(${id})">Edit Comment</button>
-              `;
-                layer.setPopupContent(popupContent);  // Update the content
-                layer.openPopup();  // Open the updated popup
-            } else {
-                console.warn('Layer not found for id:', id);
-            }
-
-            console.log('Updated error report:', errorReport);
-        }
-    }
-}
-
-
-// Function to get all reported errors
-function getReportedErrors() {
-    return reportedErrors;
-}
-
-//
-//
-//
-// Function to save errors locally as a JSON file
-function saveErrorsLocally() {
-    var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(reportedErrors));
-    var downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "map_errors.json");
-    document.body.appendChild(downloadAnchorNode); // required for firefox
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-}
-
-// Add a button to save errors
-var saveButton = L.control({ position: 'bottomright' });
-saveButton.onAdd = function (map) {
-    var div = L.DomUtil.create('div', 'save-button');
-    div.innerHTML = '<button onclick="saveErrorsLocally()">Save Errors</button>';
-    return div;
-};
-saveButton.addTo(map);
 
 //
 //
@@ -191,11 +120,20 @@ L.Control.LocateButton = L.Control.extend({
 map.addControl(new L.Control.LocateButton({ position: 'bottomright' }));
 
 // Handle location found event
+var userLocMarker = {};
+var userLocCircle = {};
 map.on('locationfound', function (e) {
+    if (userLocMarker != undefined) {
+        map.removeLayer(userLocMarker);
+    };
+    if (userLocCircle != undefined) {
+        map.removeLayer(userLocCircle);
+    };
+    L.circle()
     var radius = e.accuracy / 2;
-    L.marker(e.latlng).addTo(map)
+    userLocMarker =L.marker(e.latlng).addTo(map)
         .bindPopup("You are within " + radius + " meters from this point").openPopup();
-    L.circle(e.latlng, radius).addTo(map);
+    userLocCircle = L.circle(e.latlng, radius).addTo(map);
 });
 
 // Handle location error event
@@ -219,21 +157,3 @@ L.Control.geocoder({
             .openPopup();
     })
     .addTo(map);
-
-//
-//
-//
-//Overlay on page load
-// Function to handle the overlay dismissal
-function dismissOverlay() {
-    var overlay = document.getElementById('instructionOverlay');
-    overlay.style.display = 'none'; // Hide the overlay
-}
-
-// Event listener for the button click to dismiss the overlay
-document.getElementById('closeOverlayButton').addEventListener('click', dismissOverlay);
-
-// Optionally, you can add an event listener to dismiss the overlay when the user clicks on the map itself
-map.on('click', function () {
-    dismissOverlay();
-});
