@@ -1,11 +1,16 @@
 ﻿@{
     ViewData["Title"] = "Home Page";
 }
+<!-- Overlay for the initial instruction -->
+<div id="instructionOverlay" class="overlay">
+    <div class="overlay-content">
+        <h2 id="welcomeText">Welcome to the Map</h2>
+        <p id="instructionText">Click anywhere on the map to start drawing.</p>
+        <button type="button" id="closeOverlayButton">Got it!</button>
+    </div>
+</div>
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-
+<div>
     <!-- Language switcher dropdown -->
     <select id="languageSwitcher">
         <option value="en">English</option>
@@ -14,15 +19,7 @@
     </select>
 
 
-    <!-- Overlay for the initial instruction -->
-    <!div id="instructionOverlay" class="overlay">
-        <div class="overlay-content">
-            <h2 id="welcomeText">Welcome to the Map</h2>
-            <p id="instructionText">Click anywhere on the map to start drawing.</p>
-            <button id="closeOverlayButton">Got it!</button>
-        </div>
-    </!div>
-
+    
 
     <div id="map" style="height: 500px;"></div>
 
