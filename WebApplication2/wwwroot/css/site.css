@@ -67,23 +67,22 @@ body {
 }
 
 #startupoverlay {
-    width: 100%;
-    display: inline;
-    position: fixed;
+    position: fixed; /* Stretches over the entire screen */
     top: 0;
-    bottom: 0;
-    right: 0;
     left: 0;
-    z-index: 5000;
-    background-color: black;
-    opacity: 0.5;
+    width: 100vw; /* Full width of the viewport */
+    height: 100vh; /* Full height of the viewport */
+    background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background */
+    display: flex; /* Flexbox to center content */
+    justify-content: center; /* Horizontally center */
+    align-items: center; /* Vertically center */
+    z-index: 1000; /* Makes sure it's on top of other content */
 }
 
 #welcometext {
-    display: inline;
-    width: 50%;
-    top: 50%;
-    right: 50%;
-    left: 50%;
-    bottom: 50%;
+    color: white; /* Text color */
+    text-align: center; /* Center align text */
+    padding: 20px; /* Optional padding */
+    background-color: rgba(255, 255, 255, 0.1); /* Optional background for the text area */
+    border-radius: 10px; /* Optional rounded corners */
 }

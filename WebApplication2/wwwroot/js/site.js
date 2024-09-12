@@ -160,3 +160,19 @@ L.Control.geocoder({
             .openPopup();
     })
     .addTo(map);
+
+
+// Wait for the DOM content to be fully loaded
+document.addEventListener('DOMContentLoaded', function () {
+    // Select the button inside the overlay
+    const button = document.querySelector('#welcometext button');
+
+    // Add a click event listener to the button
+    button.addEventListener('click', function () {
+        // Select the overlay div
+        const overlay = document.getElementById('startupoverlay');
+
+        // Remove the overlay from the DOM
+        overlay.remove();
+    });
+});
