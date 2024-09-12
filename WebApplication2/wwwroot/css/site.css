@@ -65,3 +65,25 @@ body {
 .custom-zoom-control button:hover {
     background: #f0f0f0;
 }
+
+#startupoverlay {
+    width: 100%;
+    display: inline;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    z-index: 5000;
+    background-color: black;
+    opacity: 0.5;
+}
+
+#welcometext {
+    display: inline;
+    width: 50%;
+    top: 50%;
+    right: 50%;
+    left: 50%;
+    bottom: 50%;
+}

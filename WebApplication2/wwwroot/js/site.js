@@ -9,6 +9,7 @@ document.getElementById('zoom-out').onclick = function () {
     map.zoomOut();
 };
 
+//Add map tilelayer (Map image)
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
@@ -123,12 +124,14 @@ map.addControl(new L.Control.LocateButton({ position: 'bottomright' }));
 var userLocMarker = {};
 var userLocCircle = {};
 map.on('locationfound', function (e) {
+    //Remove marker and circle if they already exist
     if (userLocMarker != undefined) {
         map.removeLayer(userLocMarker);
     };
     if (userLocCircle != undefined) {
         map.removeLayer(userLocCircle);
     };
+    //Create marker and circle on position
     L.circle()
     var radius = e.accuracy / 2;
     userLocMarker =L.marker(e.latlng).addTo(map)
