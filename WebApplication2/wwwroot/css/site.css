@@ -40,7 +40,7 @@ body {
     z-index: 4000;
 }
 
-
+/*Zoom buttons*/
 .custom-zoom-control {
     position: absolute;
     top: 10%;
@@ -66,6 +66,7 @@ body {
     background: #f0f0f0;
 }
 
+/*Overlay on page load*/
 #startupoverlay {
     position: fixed; /* Stretches over the entire screen */
     top: 0;
@@ -83,6 +84,106 @@ body {
     color: white; /* Text color */
     text-align: center; /* Center align text */
     padding: 20px; /* Optional padding */
-    background-color: rgba(255, 255, 255, 0.1); /* Optional background for the text area */
+    background-color: rgb(26, 131, 59); /* Optional background for the text area */
     border-radius: 10px; /* Optional rounded corners */
+}
+
+/*Close overlay button*/
+#overlaybutton {
+    width: 100px;
+    height: 35px;
+    
+    font-size: 11px;
+    font-weight: 500;
+   
+    letter-spacing: 2.5px;
+    font-weight: 500;
+    color: #000;
+    background-color: #fff;
+    border: none;
+    border-radius: 45px;
+    box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease 0s;
+    cursor: pointer;
+    outline: none;
+}
+
+#overlaybutton:hover {
+    background-color: #2EE59D;
+    color: white;
+}
+
+/*List of shapes*/
+#shapes-list-container {
+    position: absolute;
+    bottom: 12%;
+    left: 10px;
+    background: white;
+    padding: 10px;
+    border-radius: 4px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+    z-index: 1000;
+    max-width: 250px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#shapes-list-container h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+#shapes-list ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+#shapes-list li {
+    cursor: pointer;
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+}
+
+#shapes-list li:hover {
+    background-color: #f0f0f0;
+}
+
+/*Button when choosing shape to draw*/
+.shape-button {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2.5px;
+    font-weight: 500;
+
+    color: #fff;
+    border: none;
+    border-radius: 45px;
+    box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease 0s;
+    cursor: pointer;
+    outline: none;
+}
+#markershapebutton {
+    background-color: rgb(255, 131, 59);
+}
+#circleshapebutton {
+    background-color: rgb(200, 50, 59);
+}
+#polylineshapebutton {
+    background-color: blue;
+}
+#polygonshapebutton {
+    background-color: green;
+}
+
+
+
+/*Icons*/
+/* Step 1: Common Properties
+  These styles are required to make icons render reliably */
+.icon::before {
+    display: inline-block;
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
 }
