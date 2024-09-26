@@ -26,13 +26,96 @@ var currentMode = null;
 // Initialize an array to store shape information
 var shapesList = [];
 
+// Create a modal dialog for comments
+var commentModal = document.getElementById('comment-modal');
+var currentLayer;
+
+// Function to show the comment modal
+function showCommentModal(layer) {
+    currentLayer = layer;
+    commentModal.style.display = 'flex'; // Show the modal
+    document.getElementById('comment-input').focus(); // Focus on the input field
+}
+
+// Function to hide the comment modal
+function hideCommentModal(removeLayer = false) {
+    commentModal.style.display = 'none'; // Hide the modal
+    document.getElementById('comment-input').value = ''; // Clear the input field
+
+    // Remove the layer if specified (for cancel action)
+    if (removeLayer && currentLayer) {
+        drawnItems.removeLayer(currentLayer);
+    }
+
+    currentLayer = null; // Reset currentLayer
+}
+
+// Attach event listeners to modal buttons
+document.getElementById('cancel-comment').addEventListener('click', function () {
+    hideCommentModal(true); // Pass true to remove the layer on cancel
+});
+
+// Function to show the modal for editing a comment
+function showEditCommentModal(layer, existingComment) {
+    currentLayer = layer;
+    document.getElementById('comment-input').value = existingComment; // Populate with existing comment
+    commentModal.style.display = 'flex'; // Show the modal
+    document.getElementById('comment-input').focus(); // Focus on the input field
+}
+
+// Edit the existing marker's comment
+function editCorrection(id) {
+    var shapeIndex = shapesList.findIndex(shape => shape.id === id);
+    if (shapeIndex !== -1) {
+        var shape = shapesList[shapeIndex];
+        var layer = drawnItems.getLayer(id);
+        if (layer) {
+            // Show the modal for editing the current comment
+            showEditCommentModal(layer, shape.comment);
+        }
+    }
+}
+
+// Attach event listeners to modal buttons
+document.getElementById('cancel-comment').addEventListener('click', function () {
+    hideCommentModal(true); // Remove the marker/shape on cancel
+});
+
+document.getElementById('submit-comment').addEventListener('click', function () {
+    var comment = document.getElementById('comment-input').value.trim();
+    if (comment) {
+        currentLayer.bindPopup(comment); // Update the popup with the new comment
+
+        // Find the shape in the shapes list by its ID and update the comment
+        var shapeIndex = shapesList.findIndex(shape => shape.id === L.stamp(currentLayer));
+
+        if (shapeIndex !== -1) {
+            // Update existing shape comment
+            shapesList[shapeIndex].comment = comment;
+        } else {
+            // If the shape is new (during creation), add it to the shapesList
+            shapesList.push({
+                id: L.stamp(currentLayer),
+                type: currentLayer instanceof L.Marker ? 'Markør' :
+                    currentLayer instanceof L.Circle ? 'Sirkel' :
+                        currentLayer instanceof L.Polygon ? 'Polygon' :
+                            currentLayer instanceof L.Polyline ? 'Linje' : 'Unknown',
+                comment: comment
+            });
+        }
+
+        updateShapesList(); // Refresh the shapes list
+        hideCommentModal(); // Hide the modal after submitting
+    }
+});
+
 // Function to show shape selection popup
 function showShapeSelectionPopup(latlng) {
     var popupContent = L.DomUtil.create('div', 'shape-selection-popup');
     popupContent.innerHTML = `
         <button class="shape-button" id="markershapebutton"   data-shape="Marker">  <i class="fa-solid fa-location-dot"></i> Markør  </button>
         <button class="shape-button" id="circleshapebutton"   data-shape="Circle">  <i class="fa-regular fa-circle"></i>     Sirkel  </button>
-        <button class="shape-button" id="polylineshapebutton" data-shape="Line">    <i class="fa-solid fa-minus"></i>        Linje   </button>
+        <button class="shape-button" id="polylineshapebutton" data-shape="Polyline">    <i class="fa-solid fa-minus"></i>    Linje   </button>
         <button class="shape-button" id="polygonshapebutton"  data-shape="Polygon"> <i class="fa-solid fa-diamond"></i>      Polygon </button>
     `;
 
@@ -58,7 +141,7 @@ function selectShape(shapeType, latlng) {
     var drawOptions = {
         marker: shapeType === 'Marker' ? { startingPoint: latlng } : false,
         circle: shapeType === 'Circle',
-        polyline: shapeType === 'Line',
+        polyline: shapeType === 'Polyline',
         polygon: shapeType === 'Polygon',
         rectangle: false,
         circlemarker: false
@@ -66,10 +149,6 @@ function selectShape(shapeType, latlng) {
 
     var shape = new L.Draw[shapeType](map, drawOptions[shapeType.toLowerCase()]);
     shape.enable();
-
-    if (shapeType === 'Marker') {
-        shape.setLatLng(latlng);
-    }
 
     currentMode = shapeType;
 
@@ -93,21 +172,8 @@ map.on(L.Draw.Event.CREATED, function (event) {
     var layer = event.layer;
     drawnItems.addLayer(layer);
 
-    // Prompt for a comment
-    var comment = prompt("Legg til en kommentar for denne markeringen:");
-    if (comment) {
-        layer.bindPopup(comment);
-
-        // Add shape info to the list
-        shapesList.push({
-            id: L.stamp(layer),
-            type: event.layerType,
-            comment: comment
-        });
-
-        // Update the shapes list display
-        updateShapesList();
-    }
+    // Show the custom comment modal instead of using prompt()
+    showCommentModal(layer);
 
     // Reset the drawing mode
     currentMode = null;
@@ -124,47 +190,71 @@ map.on('draw:drawstop', function () {
 });
 
 // Add a button to center on user's location
-L.Control.LocateButton = L.Control.extend({
-    onAdd: function (map) {
-        var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-        var button = L.DomUtil.create('a', 'locate-button', container);
-        button.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i>'; // Font Awesome icon
-        button.href = '#';
-        button.title = 'Sentrer på min plassering';
+var userLocMarker;
+var userLocCircle;
 
-        L.DomEvent.on(button, 'click', function (e) {
-            L.DomEvent.preventDefault(e);
+//Custom icon to distinguish user location from other markers
+const userLocIcon = L.divIcon({
+    html: '<i class="fa-solid fa-location-dot fa-2xl" style="color: #28a745;"></i>',
+    className: 'userLocIcon',
+    iconSize: [27, 36],
+    popupAnchor: [0, -20],
+});
+
+// Add a button to center on user's location
+L.Control.LocateButton = L.Control.extend({
+    options: {
+        position: 'bottomright'
+    },
+
+    onAdd: function (map) {
+        var self = this;
+        var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-locate');
+        this._button = L.DomUtil.create('a', 'locate-button', container);
+        this._button.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i>'; // Font Awesome icon
+        this._button.href = '#';
+        this._button.title = 'Sentrer på min plassering';
+
+        this._loadingIndicator = L.DomUtil.create('div', 'loading-indicator', container);
+        this._loadingIndicator.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; // Font Awesome spinner icon
+        this._loadingIndicator.style.display = 'none'; // Hide by default
+
+        L.DomEvent.on(this._button, 'click', function (e) {
+            L.DomEvent.stop(e);  // This stops propagation and prevents default behavior
+            self._button.style.display = 'none'; // Hide the button
+            self._loadingIndicator.style.display = 'flex'; // Show the loading indicator
             map.locate({ setView: true, maxZoom: 16 });
+        });
+
+        // Event handlers for location found and error
+        map.on('locationfound', function (e) {
+            self._button.style.display = 'flex'; // Show the button again
+            self._loadingIndicator.style.display = 'none'; // Hide the loading indicator
+
+            // Create or update the location marker and circle
+            if (userLocMarker) {
+                map.removeLayer(userLocMarker);
+            }
+            if (userLocCircle) {
+                map.removeLayer(userLocCircle);
+            }
+            var radius = e.accuracy / 2;
+            userLocMarker = L.marker(e.latlng, { icon: userLocIcon }).addTo(map)
+                .bindPopup("Du er innen " + radius + " meter fra dette punktet").openPopup();
+            userLocCircle = L.circle(e.latlng, radius).addTo(map);
+        });
+
+        map.on('locationerror', function (e) {
+            self._button.style.display = 'flex'; // Show the button again
+            self._loadingIndicator.style.display = 'none'; // Hide the loading indicator
+            alert("Lokasjon tillatelser nektet, eller ikke tilgjengelige.");
         });
 
         return container;
     }
 });
 
-map.addControl(new L.Control.LocateButton({ position: 'bottomright' }));
-
-// Handle location found event
-var userLocMarker = {};
-var userLocCircle = {};
-map.on('locationfound', function (e) {
-    //Remove marker and circle if they already exist
-    if (userLocMarker != undefined) {
-        map.removeLayer(userLocMarker);
-    };
-    if (userLocCircle != undefined) {
-        map.removeLayer(userLocCircle);
-    };
-    //Create marker and circle on position
-    var radius = e.accuracy / 2;
-    userLocMarker = L.marker(e.latlng).addTo(map)
-        .bindPopup("Du er innen " + radius + " meter fra dette punktet").openPopup();
-    userLocCircle = L.circle(e.latlng, radius).addTo(map);
-});
-
-// Handle location error event
-map.on('locationerror', function (e) {
-    alert("Lokasjon tillatelser nektet, eller ikke tilgjengelige.");
-});
+map.addControl(new L.Control.LocateButton());
 
 // Add the geocoder control
 var geocoder = L.Control.geocoder({
@@ -214,23 +304,6 @@ function updateShapesList() {
         ul.appendChild(li);
     });
     listContainer.appendChild(ul);
-}
-
-// Function to edit a correction
-function editCorrection(id) {
-    var shapeIndex = shapesList.findIndex(shape => shape.id === id);
-    if (shapeIndex !== -1) {
-        var shape = shapesList[shapeIndex];
-        var newComment = prompt("Rediger kommentar:", shape.comment);
-        if (newComment !== null) {
-            shape.comment = newComment;
-            var layer = drawnItems.getLayer(id);
-            if (layer) {
-                layer.setPopupContent(newComment);
-            }
-            updateShapesList();
-        }
-    }
 }
 
 // Function to delete a correction
